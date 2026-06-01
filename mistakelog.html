@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MistakeLog AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --card: #16161f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #ff4d6d;
+    --accent2: #ff8fa3;
+    --blue: #4d9eff;
+    --green: #4dffb0;
+    --amber: #ffb84d;
+    --purple: #a78bfa;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px; min-height: 100vh; background: var(--bg2);
+    border-right: 1px solid var(--border); padding: 24px 0;
+    display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+    position: fixed; top: 0; left: 0; height: 100%;
+  }
+  .logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .logo-name { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  .logo-tag { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+    font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer;
+    transition: all 0.15s; border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(255,77,109,0.06); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  .main { margin-left: 220px; flex: 1; padding: 28px 32px; max-width: calc(100% - 220px); }
+
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+
+  .stat { text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 700; font-family: var(--mono); }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stat-delta { font-size: 11px; margin-top: 6px; }
+  .up { color: var(--green); } .down { color: var(--accent); }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: 12px;
+    padding: 40px 24px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--bg3);
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(255,77,109,0.04); }
+  .upload-icon { font-size: 32px; margin-bottom: 12px; }
+  .upload-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .upload-sub { font-size: 12px; color: var(--muted); }
+
+  .mistake-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .mistake-row:last-child { border-bottom: none; }
+  .mistake-num { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 36px; margin-top: 2px; }
+  .mistake-body { flex: 1; }
+  .mistake-desc { font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .mistake-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tag-conceptual { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .tag-calc { background: rgba(77,158,255,0.15); color: var(--blue); }
+  .tag-formula { background: rgba(255,184,77,0.15); color: var(--amber); }
+  .tag-misread { background: rgba(255,77,109,0.15); color: var(--accent2); }
+  .tag-time { background: rgba(77,255,176,0.15); color: var(--green); }
+  .tag-subject { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .marks-lost { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); min-width: 42px; text-align: right; }
+
+  .bar-row { margin-bottom: 14px; }
+  .bar-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+  .bar-bg { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+
+  .alert {
+    display: flex; gap: 12px; padding: 14px 16px;
+    background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.2);
+    border-radius: 10px; margin-bottom: 10px;
+  }
+  .alert-icon { font-size: 18px; flex-shrink: 0; }
+  .alert-title { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .alert-body { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .ai-input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text);
+    font-family: var(--font); outline: none;
+  }
+  .ai-input:focus { border-color: rgba(255,77,109,0.4); }
+  .btn { padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: var(--font); transition: all 0.15s; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #e63558; }
+  .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .ai-msg { background: var(--bg3); border-radius: 10px; padding: 14px 16px; margin-top: 12px; }
+  .ai-label { font-size: 10px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .ai-text { font-size: 13px; line-height: 1.7; color: var(--text); }
+  .typing { display: flex; gap: 4px; align-items: center; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: pulse 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  .damage-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .damage-row:last-child { border-bottom: none; }
+  .damage-topic { flex: 1; font-size: 13px; font-weight: 500; }
+  .damage-bar-wrap { flex: 2; }
+  .damage-marks { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); min-width: 56px; text-align: right; }
+
+  .plan-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .plan-item:last-child { border-bottom: none; }
+  .plan-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,77,109,0.15); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+  .plan-text { font-size: 13px; padding-top: 3px; line-height: 1.5; }
+
+  .holy-grail { background: linear-gradient(135deg, rgba(255,77,109,0.12) 0%, rgba(167,139,250,0.08) 100%); border: 1px solid rgba(255,77,109,0.25); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .holy-title { font-size: 12px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .holy-text { font-size: 15px; font-weight: 600; line-height: 1.5; }
+  .holy-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .loading-bar { height: 2px; background: linear-gradient(90deg, var(--accent), var(--purple)); border-radius: 1px; animation: loadbar 1.5s ease-in-out infinite; }
+  @keyframes loadbar { 0% { width: 0%; } 50% { width: 60%; } 100% { width: 100%; } }
+
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-name">MistakeLog AI</div>
+      <div class="logo-tag">// your marks are symptoms</div>
+    </div>
+    <div class="nav-item active" onclick="showSection('dashboard', this)"><span class="nav-dot" style="background:var(--accent)"></span>Dashboard</div>
+    <div class="nav-item" onclick="showSection('upload', this)"><span class="nav-dot"></span>Upload Test</div>
+    <div class="nav-item" onclick="showSection('mistakes', this)"><span class="nav-dot"></span>Mistake Log</div>
+    <div class="nav-item" onclick="showSection('damage', this)"><span class="nav-dot"></span>Topic Damage</div>
+    <div class="nav-item" onclick="showSection('recurring', this)"><span class="nav-dot"></span>Recurring Errors</div>
+    <div class="nav-item" onclick="showSection('aicoach', this)"><span class="nav-dot" style="background:var(--purple)"></span>AI Coach</div>
+    <div style="flex:1"></div>
+    <div style="padding: 16px 20px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border);">
+      <div style="font-weight:600; color: var(--text); margin-bottom:2px;">Arjun Singh</div>
+      <div>JEE 2025 · Free Plan</div>
+      <div style="margin-top:8px; font-size:10px; color:var(--accent);">2/5 tests used this month</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="section visible">
+      <div class="page-header">
+        <div class="page-title">Your mistake intelligence</div>
+        <div class="page-sub">Updated after your last test · 3 days ago</div>
+      </div>
+      <div class="holy-grail">
+        <div class="holy-title">⚡ Weakness spotlight</div>
+        <div class="holy-text">Your biggest weakness is not Physics.<br>It's rushing calculations <em>during</em> Physics tests.</div>
+        <div class="holy-sub">This accounts for 31% of all marks lost this month.</div>
+      </div>
+      <div class="grid4" style="margin-bottom:16px">
+        <div class="card stat"><div class="stat-val" style="color:var(--accent)">247</div><div class="stat-label">Mistakes logged</div></div>
+        <div class="card stat"><div class="stat-val" style="color:var(--amber)">38</div><div class="stat-label">Recurring errors</div><div class="stat-delta down">↑ 3 this week</div></div>
+        <div class="card stat"><div class="stat-val" style="color:var(--text)">312</div><div class="stat-label">Total marks lost</div></div>
+        <div class="card stat"><div class="stat-val" style="color:var(--green)">89</div><div class="stat-label">Marks recovered</div><div class="stat-delta up">↑ 14 this month</div></div>
+      </div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Mistake trend — last 4 months</div>
+          <div style="position:relative;height:180px"><canvas id="trendChart" role="img" aria-label="Mistakes declining from 89 in Jan to 38 in Apr">Mistakes: Jan 89, Feb 71, Mar 54, Apr 38.</canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Error type breakdown</div>
+          <div style="position:relative;height:180px"><canvas id="typeChart" role="img" aria-label="Error types: Conceptual 34%, Calculation 28%, Formula 18%, Misread 12%, Time 8%">Conceptual 34%, Calculation 28%, Formula 18%, Misread 12%, Time 8%.</canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top score killers this month</div>
+        <div class="damage-row"><div class="damage-topic">Electrostatics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:82%;background:var(--accent)"></div></div></div><div class="damage-marks">-42 marks</div></div>
+        <div class="damage-row"><div class="damage-topic">Integration</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:62%;background:var(--amber)"></div></div></div><div class="damage-marks">-31 marks</div></div>
+        <div class="damage-row"><div class="damage-topic">Thermodynamics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:36%;background:var(--blue)"></div></div></div><div class="damage-marks">-18 marks</div></div>
+        <div class="damage-row"><div class="damage-topic">Organic Chemistry</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:26%;background:var(--purple)"></div></div></div><div class="damage-marks">-13 marks</div></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div id="sec-upload" class="section">
+      <div class="page-header"><div class="page-title">Upload a test</div><div class="page-sub">AI extracts every mistake automatically</div></div>
+      <div class="grid2" style="align-items:start">
+        <div>
+          <div class="upload-zone" onclick="simulateUpload()">
+            <div class="upload-icon">📄</div>
+            <div class="upload-title">Drop your test here</div>
+            <div class="upload-sub">PDF, JPG, PNG · question paper + answer sheet</div>
+            <div style="margin-top:14px"><button class="btn btn-accent" onclick="event.stopPropagation();simulateUpload()">Choose files</button></div>
+          </div>
+          <div id="uploadStatus" style="display:none;margin-top:16px" class="card">
+            <div class="card-title">Processing test...</div>
+            <div class="loading-bar" style="margin-bottom:12px"></div>
+            <div id="uploadSteps" style="font-size:12px;color:var(--muted);line-height:2"></div>
+          </div>
+          <div id="uploadResult" style="display:none;margin-top:16px" class="card">
+            <div class="card-title">✅ Analysis complete</div>
+            <div class="grid2" style="margin-bottom:12px">
+              <div style="text-align:center"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--accent)">14</div><div style="font-size:11px;color:var(--muted)">Questions wrong</div></div>
+              <div style="text-align:center"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--accent)">-31</div><div style="font-size:11px;color:var(--muted)">Marks lost</div></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600">Topics impacted</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="tag tag-subject">Electrostatics</span>
+              <span class="tag tag-subject">Calculus</span>
+              <span class="tag tag-subject">Thermodynamics</span>
+            </div>
+            <button class="btn btn-accent" style="margin-top:14px;width:100%" onclick="showSection('mistakes',document.querySelectorAll('.nav-item')[2])">View extracted mistakes →</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">What AI extracts</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg3);border-radius:8px"><div style="color:var(--accent);font-size:16px;flex-shrink:0">✗</div><div><div style="font-size:12px;font-weight:600">Wrong question + topic</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Automatically maps to syllabus chapter</div></div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg3);border-radius:8px"><div style="color:var(--purple);font-size:16px;flex-shrink:0">🏷</div><div><div style="font-size:12px;font-weight:600">Error category</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Conceptual / Calc / Formula / Misread / Time</div></div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg3);border-radius:8px"><div style="color:var(--amber);font-size:16px;flex-shrink:0">⚠</div><div><div style="font-size:12px;font-weight:600">Marks lost per mistake</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Weighted by negative marking rules</div></div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg3);border-radius:8px"><div style="color:var(--green);font-size:16px;flex-shrink:0">🔁</div><div><div style="font-size:12px;font-weight:600">Repeat detection</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Flags if you made this error before</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISTAKE LOG -->
+    <div id="sec-mistakes" class="section">
+      <div class="page-header"><div class="page-title">Mistake database</div><div class="page-sub">247 mistakes logged across 18 tests</div></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <select style="background:var(--card);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:8px;font-family:var(--font);font-size:12px;outline:none;cursor:pointer"><option>All subjects</option><option>Physics</option><option>Maths</option><option>Chemistry</option></select>
+        <select style="background:var(--card);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:8px;font-family:var(--font);font-size:12px;outline:none;cursor:pointer"><option>All error types</option><option>Conceptual</option><option>Calculation</option><option>Formula Recall</option><option>Misread</option><option>Time</option></select>
+      </div>
+      <div class="card">
+        <div class="mistake-row"><div class="mistake-num">#247</div><div class="mistake-body"><div class="mistake-desc">Misapplied superposition principle — forgot to account for induced charges on conductor</div><div class="mistake-meta"><span class="tag tag-conceptual">Conceptual</span><span class="tag tag-subject">Physics</span><span class="tag tag-subject">Electrostatics</span><span style="font-size:10px;color:var(--muted)">3 days ago</span></div></div><div class="marks-lost">-4</div></div>
+        <div class="mistake-row"><div class="mistake-num">#246</div><div class="mistake-body"><div class="mistake-desc">Sign error in integration by parts — dropped the negative during second round</div><div class="mistake-meta"><span class="tag tag-calc">Calculation</span><span class="tag tag-subject">Maths</span><span class="tag tag-subject">Integration</span><span style="font-size:10px;color:var(--muted)">3 days ago</span><span style="font-size:10px;color:var(--accent)">🔁 Recurring x9</span></div></div><div class="marks-lost">-4</div></div>
+        <div class="mistake-row"><div class="mistake-num">#245</div><div class="mistake-body"><div class="mistake-desc">Forgot Lens Maker's equation sign convention for concave lens</div><div class="mistake-meta"><span class="tag tag-formula">Formula Recall</span><span class="tag tag-subject">Physics</span><span class="tag tag-subject">Optics</span><span style="font-size:10px;color:var(--muted)">3 days ago</span></div></div><div class="marks-lost">-4</div></div>
+        <div class="mistake-row"><div class="mistake-num">#244</div><div class="mistake-body"><div class="mistake-desc">Read "non-zero" as "zero" — misidentified equilibrium condition</div><div class="mistake-meta"><span class="tag tag-misread">Misread</span><span class="tag tag-subject">Maths</span><span style="font-size:10px;color:var(--muted)">3 days ago</span></div></div><div class="marks-lost">-1</div></div>
+        <div class="mistake-row"><div class="mistake-num">#243</div><div class="mistake-body"><div class="mistake-desc">Left Q18 blank due to time pressure — knew the concept but couldn't start</div><div class="mistake-meta"><span class="tag tag-time">Time Mgmt</span><span class="tag tag-subject">Chemistry</span><span class="tag tag-subject">Thermodynamics</span><span style="font-size:10px;color:var(--muted)">3 days ago</span></div></div><div class="marks-lost">-4</div></div>
+        <div class="mistake-row"><div class="mistake-num">#242</div><div class="mistake-body"><div class="mistake-desc">Used wrong formula for work done in adiabatic process — confused with isothermal</div><div class="mistake-meta"><span class="tag tag-conceptual">Conceptual</span><span class="tag tag-subject">Chemistry</span><span class="tag tag-subject">Thermo</span><span style="font-size:10px;color:var(--muted)">3 days ago</span><span style="font-size:10px;color:var(--accent)">🔁 Recurring x5</span></div></div><div class="marks-lost">-4</div></div>
+      </div>
+    </div>
+
+    <!-- TOPIC DAMAGE -->
+    <div id="sec-damage" class="section">
+      <div class="page-header"><div class="page-title">Topic damage report</div><div class="page-sub">Where your rank is bleeding out</div></div>
+      <div class="grid3" style="margin-bottom:16px">
+        <div class="card stat"><div class="stat-val" style="color:var(--accent)">-42</div><div class="stat-label">Marks · Electrostatics</div><div class="stat-delta down">Worst topic</div></div>
+        <div class="card stat"><div class="stat-val" style="color:var(--amber)">-31</div><div class="stat-label">Marks · Integration</div></div>
+        <div class="card stat"><div class="stat-val" style="color:var(--blue)">-18</div><div class="stat-label">Marks · Thermodynamics</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Physics breakdown</div>
+        <div class="damage-row"><div class="damage-topic">Electrostatics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--accent)"></div></div></div><div class="damage-marks">-42</div></div>
+        <div class="damage-row"><div class="damage-topic">Current Electricity</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:45%;background:var(--amber)"></div></div></div><div class="damage-marks">-19</div></div>
+        <div class="damage-row"><div class="damage-topic">Optics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:33%;background:var(--blue)"></div></div></div><div class="damage-marks">-14</div></div>
+        <div class="damage-row"><div class="damage-topic">Mechanics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:19%;background:var(--purple)"></div></div></div><div class="damage-marks">-8</div></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Maths breakdown</div>
+          <div class="damage-row"><div class="damage-topic">Integration</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--accent)"></div></div></div><div class="damage-marks">-31</div></div>
+          <div class="damage-row"><div class="damage-topic">Coordinate Geometry</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:52%;background:var(--amber)"></div></div></div><div class="damage-marks">-16</div></div>
+          <div class="damage-row"><div class="damage-topic">P&C</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:26%;background:var(--blue)"></div></div></div><div class="damage-marks">-8</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Chemistry breakdown</div>
+          <div class="damage-row"><div class="damage-topic">Thermodynamics</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--accent)"></div></div></div><div class="damage-marks">-18</div></div>
+          <div class="damage-row"><div class="damage-topic">Organic (GOC)</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:72%;background:var(--amber)"></div></div></div><div class="damage-marks">-13</div></div>
+          <div class="damage-row"><div class="damage-topic">Equilibrium</div><div class="damage-bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:39%;background:var(--blue)"></div></div></div><div class="damage-marks">-7</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECURRING -->
+    <div id="sec-recurring" class="section">
+      <div class="page-header"><div class="page-title">Recurring errors</div><div class="page-sub">Mistakes your brain refuses to fix</div></div>
+      <div class="alert"><div class="alert-icon">🔁</div><div><div class="alert-title">Sign convention errors — Physics</div><div class="alert-body">11 occurrences · 23 marks lost total · First seen 4 months ago</div></div></div>
+      <div class="alert"><div class="alert-icon">🔁</div><div><div class="alert-title">Integration by parts sign drop</div><div class="alert-body">9 occurrences · 18 marks lost total · Happening more frequently</div></div></div>
+      <div class="alert" style="background:rgba(255,184,77,0.06);border-color:rgba(255,184,77,0.25)"><div class="alert-icon">⚠️</div><div><div class="alert-title" style="color:var(--amber)">Adiabatic vs Isothermal confusion</div><div class="alert-body">5 occurrences · 10 marks lost total · Conceptual gap to close</div></div></div>
+      <div class="alert" style="background:rgba(77,158,255,0.06);border-color:rgba(77,158,255,0.2)"><div class="alert-icon">📐</div><div><div class="alert-title" style="color:var(--blue)">Boundary conditions forgotten (DEs)</div><div class="alert-body">4 occurrences · 8 marks lost total</div></div></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">Mistake reduction rate</div>
+        <div class="bar-row"><div class="bar-header"><span>Calculation errors</span><span style="color:var(--green)">↓ 74% since Jan</span></div><div class="bar-bg"><div class="bar-fill" style="width:26%;background:var(--green)"></div></div></div>
+        <div class="bar-row"><div class="bar-header"><span>Sign convention</span><span style="color:var(--amber)">↓ 31% since Jan</span></div><div class="bar-bg"><div class="bar-fill" style="width:69%;background:var(--amber)"></div></div></div>
+        <div class="bar-row"><div class="bar-header"><span>Conceptual errors</span><span style="color:var(--accent)">↑ 12% this month</span></div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:var(--accent)"></div></div></div>
+      </div>
+    </div>
+
+    <!-- AI COACH -->
+    <div id="sec-aicoach" class="section">
+      <div class="page-header"><div class="page-title">AI Coach</div><div class="page-sub">Powered by your mistake database</div></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Today's correction plan</div>
+        <div class="plan-item"><div class="plan-num">1</div><div class="plan-text">Solve 20 sign convention problems from Electrostatics — focus on Gauss's Law setups with non-symmetric charge distributions</div></div>
+        <div class="plan-item"><div class="plan-num">2</div><div class="plan-text">Review adiabatic process derivation from scratch — rewrite the W = nCv(T2-T1) proof yourself without looking</div></div>
+        <div class="plan-item"><div class="plan-num">3</div><div class="plan-text">Spend 10 mins after every test checking calculations before submitting — this alone can recover ~8 marks per test</div></div>
+        <div class="plan-item"><div class="plan-num">4</div><div class="plan-text">Do 15 integration by parts problems today — specifically track the sign at each substitution step</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ask AI about your mistakes</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="askPreset('Why do I keep making sign errors in Physics?')">Why sign errors?</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="askPreset('What should I study first to maximize my score improvement?')">What to study first?</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="askPreset('Am I improving over time?')">Am I improving?</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="askPreset('Give me a weekly study plan based on my weaknesses.')">Weekly plan</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input class="ai-input" id="aiInput" type="text" placeholder="Ask anything about your mistake patterns..." onkeydown="if(event.key==='Enter') sendAI()" />
+          <button class="btn btn-accent" onclick="sendAI()" id="aiBtn">Ask →</button>
+        </div>
+        <div id="aiResponse"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+  document.getElementById('sec-' + id).classList.add('visible');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (id === 'dashboard') initCharts();
+}
+
+let chartsInited = false;
+function initCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: ['Jan','Feb','Mar','Apr'],
+      datasets: [{ label: 'Mistakes', data: [89,71,54,38], borderColor: '#ff4d6d', backgroundColor: 'rgba(255,77,109,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#ff4d6d', pointRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b6b80', font: { size: 11 } } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b6b80', font: { size: 11 } } } } }
+  });
+  new Chart(document.getElementById('typeChart'), {
+    type: 'doughnut',
+    data: { labels: ['Conceptual','Calculation','Formula','Misread','Time'], datasets: [{ data: [34,28,18,12,8], backgroundColor: ['#a78bfa','#4d9eff','#ffb84d','#ff4d6d','#4dffb0'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: '#6b6b80', font: { size: 11 }, boxWidth: 10, padding: 10 } } } }
+  });
+}
+initCharts();
+
+function simulateUpload() {
+  const status = document.getElementById('uploadStatus');
+  const result = document.getElementById('uploadResult');
+  const steps = document.getElementById('uploadSteps');
+  status.style.display = 'block'; result.style.display = 'none'; steps.innerHTML = '';
+  const msgs = ['📄 Reading question paper...','🔍 Identifying wrong answers...','🏷 Categorizing error types...','📊 Mapping to syllabus topics...','🔁 Checking for recurring patterns...','✅ Done. 14 mistakes extracted.'];
+  let i = 0;
+  const t = setInterval(() => {
+    if (i < msgs.length) { steps.innerHTML += msgs[i] + '<br>'; i++; }
+    else { clearInterval(t); setTimeout(() => { status.style.display = 'none'; result.style.display = 'block'; }, 400); }
+  }, 600);
+}
+
+function askPreset(q) { document.getElementById('aiInput').value = q; sendAI(); }
+
+const mistakeContext = `Student: Arjun Singh, JEE 2025 aspirant.
+Mistake database: 247 total mistakes, 18 tests.
+Top recurring: Sign convention errors (11x, 23 marks), Integration by parts sign drop (9x), Adiabatic/isothermal confusion (5x).
+Top score killers: Electrostatics (-42), Integration (-31), Thermodynamics (-18).
+Error types: Conceptual 34%, Calculation 28%, Formula 18%, Misread 12%, Time 8%.
+Trend: Mistakes declining 89→38 over 4 months. Conceptual errors rising.
+You are a brutally honest JEE coaching AI. Give crisp, data-driven advice based on this student's mistake data. No generic motivation. Specific actions only. Keep responses under 150 words.`;
+
+async function sendAI() {
+  const input = document.getElementById('aiInput');
+  const btn = document.getElementById('aiBtn');
+  const responseDiv = document.getElementById('aiResponse');
+  const q = input.value.trim();
+  if (!q) return;
+  btn.disabled = true; btn.textContent = '...'; input.value = '';
+  responseDiv.innerHTML = '<div class="ai-msg"><div class="ai-label">AI Coach</div><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: mistakeContext, messages: [{ role: 'user', content: q }] })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || 'Could not get response.';
+    responseDiv.innerHTML = '<div class="ai-msg fade-in"><div class="ai-label">AI Coach</div><div class="ai-text">' + text.replace(/\n/g,'<br>') + '</div></div>';
+  } catch(e) {
+    responseDiv.innerHTML = '<div class="ai-msg"><div class="ai-label">AI Coach</div><div class="ai-text" style="color:var(--accent)">Error reaching AI.</div></div>';
+  }
+  btn.disabled = false; btn.textContent = 'Ask →';
+}
+</script>
+</body>
+</html>
